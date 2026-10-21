@@ -326,6 +326,19 @@ function mapRebuildResults(
       };
     }
 
+    // EasyEDA Pro 3.2.206 has returned an existing pour's copper when asked to
+    // rebuild a newly created pour. Never attribute that result to our target.
+    const nativeSourcePourId = nativeStateString(attempt.nativeResult, 'getState_PourPrimitiveId');
+    if (nativeSourcePourId !== undefined && nativeSourcePourId !== attempt.pourId) {
+      return {
+        pourId: attempt.pourId,
+        pouredId: readbackIds[0] ?? null,
+        status: 'readback-mismatch',
+        verified: false,
+        error: `Pour ${nativeSourcePourId} != ${attempt.pourId} (rebuild source mismatch).`,
+      };
+    }
+
     if (readbackIds.length === 0) {
       return {
         pourId: attempt.pourId,
