@@ -92,6 +92,11 @@ function createDependencies() {
       })),
     },
     pcbReadOperations: {
+      zonePreflight: vi.fn(async (netName: string, layer: number) => ({
+        netName,
+        layer,
+        readyToApply: false,
+      })),
       listFills: vi.fn(async (limit?: number, offset?: number) => ({
         method: 'fills',
         limit,
@@ -245,6 +250,7 @@ const expectedMethods = [
   'pcb.listVias',
   'pcb.modifyComponent',
   'pcb.rebuildCopper',
+  'pcb.zonePreflight',
   'project.export',
   'project.open',
   'project.save',
@@ -390,6 +396,14 @@ describe('createDispatcherDomainRouter', () => {
       handled: true,
       value: { method: 'rebuild-copper', params },
     });
+
+    await expect(
+      router.tryDispatch('pcb.zonePreflight', { netName: 'GND', layer: 2 }),
+    ).resolves.toEqual({
+      handled: true,
+      value: { netName: 'GND', layer: 2, readyToApply: false },
+    });
+    expect(dependencies.pcbReadOperations.zonePreflight).toHaveBeenCalledWith('GND', 2);
 
     await expect(router.tryDispatch('api.call', params)).resolves.toEqual({
       handled: true,
