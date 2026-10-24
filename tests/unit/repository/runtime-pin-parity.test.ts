@@ -20,9 +20,9 @@ async function writeJson(path: string, value: unknown) {
 async function createCanonicalFixture() {
   const root = await mkdtemp(join(tmpdir(), 'runtime-pin-parity-'));
   temporaryRoots.push(root);
-  const nodeVersion = '24.21.0';
+  const nodeVersion = '24.22.1';
   const pnpmVersion = '11.28.8';
-  const nodeImage = 'node@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1';
+  const nodeImage = 'node@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53';
 
   await writeJson(join(root, 'config/runtime-policy.json'), {
     schemaVersion: 2,
@@ -121,7 +121,7 @@ describe('runtime pin parity', () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain(
-      'Runtime pin parity check passed: Node.js 24.21.0; pnpm 11.28.8.',
+      'Runtime pin parity check passed: Node.js 24.22.1; pnpm 11.28.8.',
     );
   });
 
@@ -177,7 +177,7 @@ describe('runtime pin parity', () => {
     const dockerfile = await readFile(dockerPath, 'utf8');
     await writeFile(
       dockerPath,
-      dockerfile.replace('node:24.21.0-alpine', 'node:24.18.1-alpine'),
+      dockerfile.replace('node:24.22.1-alpine', 'node:24.18.1-alpine'),
       'utf8',
     );
     await writeFile(join(root, 'README.md'), 'runtime documentation without exact pins\n', 'utf8');
