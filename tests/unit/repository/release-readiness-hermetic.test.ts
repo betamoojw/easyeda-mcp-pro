@@ -61,6 +61,7 @@ async function createGitFixture() {
     records: [
       {
         id: 'fixture-live-record',
+        reviewBy: '2099-12-31',
         server: { commit: evidenceCommit },
       },
     ],
@@ -124,6 +125,7 @@ async function createExtensionVersionPromotionFixture(version = '1.0.0-rc.6') {
     records: [
       {
         id: 'extension-version-promotion',
+        reviewBy: '2099-12-31',
         server: { commit: evidenceCommit },
       },
     ],
@@ -205,6 +207,7 @@ async function createNoGitSnapshot() {
     records: [
       {
         id: 'snapshot-record',
+        reviewBy: '2099-12-31',
         server: { commit: '1'.repeat(40) },
       },
     ],
@@ -273,6 +276,35 @@ describe('hermetic release readiness', { timeout: GIT_FIXTURE_TEST_TIMEOUT_MS },
     );
 
     await expectCurrentCompatibilityFreshness(fixture.root);
+  });
+
+  it('rejects expired live evidence even when the sensitive source is unchanged', async () => {
+    const fixture = await createGitFixture();
+    const path = join(fixture.root, 'config/easyeda-compatibility.json');
+    const source = JSON.parse(await readFile(path, 'utf8')) as {
+      records: Array<{ reviewBy: string }>;
+    };
+    source.records[0]!.reviewBy = '2020-01-01';
+    await writeJson(path, source);
+    const report = await inspectCompatibilityFreshness({ root: fixture.root, gitBinary });
+    expect(report.status).toBe('stale');
+    expect(report.freshRecords).toBe(0);
+    expect(report.records[0]?.reason).toContain('expired on 2020-01-01');
+    expect(report.reason).toContain('review expired');
+  });
+
+  it('rejects normalized but nonexistent review dates', async () => {
+    const fixture = await createGitFixture();
+    const path = join(fixture.root, 'config/easyeda-compatibility.json');
+    const source = JSON.parse(await readFile(path, 'utf8')) as {
+      records: Array<{ reviewBy: string }>;
+    };
+    source.records[0]!.reviewBy = '2027-02-30';
+    await writeJson(path, source);
+    await expect(loadCompatibilityEvidence({ root: fixture.root })).resolves.toMatchObject({
+      ok: false,
+      reason: expect.stringContaining('valid reviewBy date'),
+    });
   });
 
   it('reuses live evidence for a pure stable minor version bump', async () => {

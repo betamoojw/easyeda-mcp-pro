@@ -8,6 +8,8 @@
   "prConcurrentLimit": 3,
   "prHourlyLimit": 1,
   "osvVulnerabilityAlerts": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
   "labels": ["dependencies"],
   "commitMessagePrefix": "chore(deps):",
   "lockFileMaintenance": {
@@ -80,6 +82,13 @@
       "automerge": false,
       "rebaseWhen": "never",
       "recreateWhen": "never"
+    },
+    {
+      "description": "Automerge npm override patch updates only after required GitHub checks pass; minor and major overrides remain manual",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["overrides"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
     }
   ]
 }

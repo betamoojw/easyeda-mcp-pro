@@ -46,6 +46,12 @@ function validateCompatibilitySnapshot(record, sensitivePaths) {
   }
 }
 
+function isValidUtcCalendarDay(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const day = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(day) && new Date(day).toISOString().slice(0, 10) === value;
+}
+
 function validateSource(source) {
   assert(source && typeof source === 'object', 'root must be an object');
   assert(source.schemaVersion === 1, 'schemaVersion must be 1');
@@ -82,6 +88,7 @@ function validateSource(source) {
     );
     validateCompatibilitySnapshot(record, source.releaseGate.sensitivePaths);
     assert(Number.isFinite(Date.parse(record.validatedAt)), `${record.id} validatedAt is invalid`);
+    assert(isValidUtcCalendarDay(record.reviewBy), `${record.id} reviewBy is not a valid UTC date`);
     assert(
       Date.parse(record.reviewBy) > Date.parse(record.validatedAt),
       `${record.id} reviewBy must follow validation`,
@@ -92,12 +99,6 @@ function validateSource(source) {
     assert(
       reviewWindowMs <= source.reviewPolicyDays * 24 * 60 * 60 * 1000,
       `${record.id} review window exceeds ${source.reviewPolicyDays} days`,
-    );
-    const today = new Date();
-    const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-    assert(
-      Date.parse(`${record.reviewBy}T23:59:59.999Z`) >= todayUtc,
-      `${record.id} compatibility evidence expired on ${record.reviewBy}`,
     );
     assert(
       Array.isArray(record.capabilities) && record.capabilities.length > 0,
