@@ -21,6 +21,7 @@ import {
   READ_ONLY_TASK_OPERATIONS,
   type DurableTaskStore,
   type SafeTaskOperation,
+  type TaskRecord,
 } from './task-store.js';
 
 // Testable, isolated 2026-07-28 tools/call producer; production intentionally
@@ -53,6 +54,27 @@ function localPrincipal(deps: LocalTaskProducerDependencies) {
   return principal;
 }
 
+/**
+ * An unavailable durable store must never echo native or SQLite exception
+ * details to an MCP client. A missing record is never acknowledged.
+ */
+function enqueueReadOnlyTask(
+  deps: LocalTaskProducerDependencies,
+  principal: { ownerId: string; allowedOperations: ReadonlySet<SafeTaskOperation> },
+  operation: SafeTaskOperation,
+  arguments_: unknown,
+): TaskRecord | undefined {
+  try {
+    return deps.runner.submit(
+      { ownerId: principal.ownerId, authorizedOperations: principal.allowedOperations },
+      operation,
+      arguments_,
+    );
+  } catch {
+    return undefined;
+  }
+}
+
 export function createLocalTaskFromToolCall(
   deps: LocalTaskProducerDependencies,
   input: z.infer<typeof toolCallParams>,
@@ -77,11 +99,10 @@ export function createLocalTaskFromToolCall(
   }
   // The SQLite insert/readback happen synchronously BEFORE returning a task
   // handle. The injected executor is never a native design write tool.
-  const task = deps.runner.submit(
-    { ownerId: principal.ownerId, authorizedOperations: principal.allowedOperations },
-    operation,
-    arguments_,
-  );
+  const task = enqueueReadOnlyTask(deps, principal, operation, arguments_);
+  if (!task) {
+    throw new ProtocolError(ProtocolErrorCode.InternalError, 'Read-only task unavailable');
+  }
   return {
     resultType: 'task' as const,
     taskId: task.id,
