@@ -38,9 +38,33 @@ change, bypass, or replace existing protection controls during qualification.
 Document the observed check identity, provider, SHA, outcome, and the rollback
 before any separately reviewed ruleset update.
 
+## Repository-owned changed-line coverage
+
+The required tests-and-coverage CI job enforces **at least 78% coverage
+of changed executable source lines** (the existing Codecov 80% patch target
+with two percentage points of tolerance). The script
+scripts/check-patch-coverage.mjs compares the PR base with the checked-out
+PR merge commit and checks added lines against the server and EasyEDA Bridge
+Extension LCOV reports **after** both local test suites succeed.
+
+A newly added source file absent from the matching LCOV report fails
+closed. Deletions, type declarations, comments and other lines without
+executable coverage records do not count; explicitly uninstrumentable
+server entrypoints excluded by Vitest are also outside the gate. A PR
+changing only docs or dependencies has no added coverable lines and passes.
+The local check requires no Codecov token, GitHub API call or third-party
+availability. If patch coverage fails, tests-and-coverage fails and the
+existing required quality (24) aggregator blocks the merge.
+
+Codecov's codecov/patch remains **advisory** for changed-line annotations
+and historical trends. It must not be added to main-standard as a required
+GitHub status solely to enforce coverage. This closes the #786 merge-control
+gap without introducing a new provider-dependent required check. The
+historical negative probe on #787 was never merged.
+
 ## Blocking coverage authority
 
-Local Vitest coverage is the blocking coverage authority. The `tests-and-coverage` job generates server and extension LCOV/JUnit outputs, applies repository-owned thresholds, and validates both report sets. That job feeds the required `quality (24)` aggregator.
+Local Vitest coverage is the blocking coverage authority. The `tests-and-coverage` job generates server and extension LCOV/JUnit outputs, applies repository-owned thresholds, and validates both report sets. Its local changed-line gate applies on pull requests. That job feeds the required `quality (24)` aggregator.
 
 Codecov remains valuable for changed-line annotations, component histories, and Test Analytics, but provider availability must not decide whether repository-owned tests passed. `codecov.yml` therefore retains the 80% patch target and two-point tolerance as advisory provider policy while branch protection relies on local coverage enforcement.
 
